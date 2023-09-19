@@ -1,0 +1,52 @@
+#!/bin/sh -e
+##:
+#h: Usage: sed-h-recurse [-f][...] CMD DIR...
+#h:
+#h: Apply a sed command to all files in directories.
+#h:
+#h: -w REGEX : Only files that contain this regex.
+##:
+sed_dir() {
+    ## Parse command line options.
+    local OPTIND optopt= opt_f= opt_w= d_ifs="${IFS}" f= IFS="
+"
+    while getopts "fw:" optopt;do # OPTARG
+        local ops="${ops}${optopt}"
+        case $optopt in
+            f)  local opt_f=y;;
+            w)  local opt_w="${OPTARG}";;
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    local opt_cmd="${1}"
+    if test ! -n "${opt_cmd}";then
+        echo "sed-dir: error: Please specify a sed command." >&2
+        return 1
+    fi
+    shift
+    if test ! -n "${1}";then
+        echo "sed-dir: error: Please specify at least one directory." >&2
+        return 1
+    fi
+    ##
+    for f in `find "$@" -type f -not -iregex '.*/\.git/.*'`;do
+        if test -n "${opt_w}" && ! grep "${opt_w}" "${f}" >/dev/null;then
+            continue
+        fi
+        if test ! @"${opt_f}" = @"y";then
+            echo sed -i'.tmp' "${opt_cmd}" "${f}"     >&2
+            echo rm -f                     "${f}.tmp" >&2
+            continue
+        fi
+        sed -i'.tmp' "${opt_cmd}" "${f}"     >&2
+        rm -f                     "${f}.tmp" >&2
+    done
+}
+## -------------------------------------------------------------------
+if test @"$(basename "$0")" = @"sed-dir";then
+    case "$1" in
+        -h|--help|'') sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        *)            sed_dir "$@"; exit 0;;
+    esac
+fi

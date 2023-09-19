@@ -1,0 +1,30 @@
+#!/bin/sh -e
+##:
+#h: Usage: crontab-h-exec CRONTAB
+#h:
+#h: Run all the tasks in the crontab.
+##:
+scron_run() {
+    if test -f "$1"; then
+        sh="`scron_script "$1"`"
+        sudo su -l -c "$sh" "`whoami`"
+    else
+        echo "File '$1' already exists." >&2
+        return 1
+    fi
+}
+scron_script() {
+    echo "set +e -v"
+    while read -r a1 a2 a3 a4 a5 cmd; do
+        case "$a1" in
+            '#'*) continue;;
+        esac
+        echo "$cmd"
+    done < "$1"
+}
+if test @"$(basename "$0")" = @"crontab-h-exec";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        *)            scron_run "$@"; exit 0;;
+    esac
+fi

@@ -1,0 +1,35 @@
+#!/bin/sh -e
+##:
+#h: Usage: ls-h-color ...
+#h:
+#h: Script for selecting color codes.
+##:
+ls_h_color() (
+    eval "$(dircolors)"
+    echo "${LS_COLORS}" | tr ':' '\n' | sed '
+    s|^no|no(global default)|g
+    s|^fi|fi(normal file)|g
+    s|^di|di(directory)|g
+    s|^ln|ln(symbolic link)|g
+    s|^pi|pi(named pipe)|g
+    s|^so|so(socket)|g
+    s|^do|do(door)|g
+    s|^bd|bd(block device)|g
+    s|^cd|cd(character device)|g
+    s|^or|or(orphan symlink)|g
+    s|^mi|mi(missing file)|g
+    s|^su|su(set uid)|g
+    s|^sg|sg(set gid)|g
+    s|^tw|tw(sticky other writable)|g
+    s|^ow|ow(other writable)|g
+    s|^st|st(sticky)|g
+    s|^ex|ex(executable)|g
+    s|=\(.*\)|=\x1B[\1m\1\x1B[0;0m|g
+    ' | less -R
+)
+if test @"$(basename "$0")" = @"ls-h-color";then
+    case "${1}" in
+        -h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        *)         ls_h_color "$@"; exit 0;;
+    esac
+fi

@@ -1,0 +1,59 @@
+#!/bin/sh -e
+##:
+#h: Usage: find-h-replace [-f WILDCARD][-a] FROM [TO]
+#h:
+#h: Replace all FROM to TO in all files [that match WILDCARD]. By
+#h: default does nothing, specify -a to actualy apply the changes.
+##:
+find_h_replace() {
+    local OPTIND optopt wildcard="*" apply= from= to= tmp="`mktemp`"
+    while getopts "f:a" optopt; do
+        case $optopt in
+            f)  wildcard="${OPTARG}";;
+            a)  apply=y;;
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    from="$1" to="$2"
+    if test ! -n "${from}"; then
+        echo >&2 "error: Specify a FROM text."
+        return 1
+    fi
+    find . -type f -iname "${wildcard}" | while read -r filename; do
+        if test -n "${apply}" && test -n "${to}"
+        then
+            
+            sed -i "s|${from}|${to}|pg" "${filename}"
+
+        elif test -n "${apply}" && test ! -n "${to}"
+        then
+
+            echo >&2 "error: Specify a TO text."
+            return 1
+
+        elif test -n "${to}"
+        then
+            sed -n "s|${from}|${to}|pg" "${filename}" > "${tmp}"
+            if test ! @"$(wc -l < "${tmp}")" = @"0"; then
+                echo ""
+                echo "== ${filename}"
+                cat "${tmp}"
+            fi
+        else
+            sed -n "s|${from}|[[${from}]]|pg" "${filename}" > "${tmp}"
+            if test ! @"$(wc -l < "${tmp}")" = @"0"; then
+                echo ""
+                echo "== ${filename}"
+                cat "${tmp}"
+            fi
+        fi
+    done
+    rm -f "${tmp}"
+}
+if test @"$(basename "$0")" = @"find-h-replace";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0";;
+        *)            find_h_replace "$@"; exit 0;;
+    esac
+fi

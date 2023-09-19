@@ -1,0 +1,61 @@
+#!/bin/sh -e
+##:
+#h: Usage: find-h-close-in-time [-s][-t DIFF] FILE DIR ...
+#h:
+#h: Search files created at similar time as FILE. By default 2 seconds.
+#h:
+#h:     -s       : Use `sudo` when searching and deleting.
+#h:     -t SECS  : Change the time window.
+#h:     -m DEPTH : Maximun depth.
+#h:     -d       : Delete the files.
+#h:
+#h: Examples:
+#h:
+#h:     > rm -i `find-h-close-in-time /usr/local/bin/program /usr/local`
+##:
+smtime() {
+    local OPTIND optopt= opt_t=2 file= dir= sudo= max= del=
+    ## Parse command line arguments.
+    while getopts "t:sm:d" optopt; do # OPTARG
+        case $optopt in
+            t)  local opt_t="${OPTARG}" ;;
+            s)  local sudo=sudo         ;;
+            m)  local max="${OPTARG}"   ;;
+            d)  local del=y             ;;
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    local file="$1"
+    if test ! -n "${file}"; then
+        echo >&2 "error: Please specify a file."
+        return 1
+    elif test ! -e "${file}"; then
+        echo >&2 "error: File '${file}' does not exist."
+        return 1
+    fi
+    ## Get modification date.
+    local mtime1="`stat -c "%Y" "${file}"`"
+    shift
+    ## Search the files.
+    for dir in "$@"; do
+        ${sudo} find "${dir}" ${max:+ -maxdepth "${max}" } -type f -or -type l | while read f;do
+            local mtime2="`${sudo} stat -c "%Y" "${f}"`"
+            local mtimed=$(( ${mtime2} - ${mtime1} ))
+            local mtimed=${mtimed#-}
+            if test "${mtimed}" -lt "${opt_t}"; then
+                if test -n "${del}"; then
+                    ${sudo} rm -vf "${f}"
+                else
+                    printf '%s\n' "${f}"
+                fi
+            fi
+        done
+    done
+}
+if test @"$(basename "$0")" = @"find-h-close-in-time";then
+    case "${1}" in
+        ''|-h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        *)            smtime "$@"; exit 0;;
+    esac
+fi

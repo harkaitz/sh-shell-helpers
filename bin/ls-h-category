@@ -1,0 +1,60 @@
+#!/bin/sh -e
+##:
+#h: Usage: ls-h-category [-l] [DIR]
+#h:
+#h: List files in markdown format (-l: with link). The files are
+#h: organized in categories.
+#h:
+#h: The category and the description are extracted from the files
+#h: themselves by searching "^\#~.*[Cc]category: " and "^\#help: *"
+#h: regular expressions.
+##:
+ls_h_category() {
+    local OPTIND optopt tmpd c f n h opt_l=
+    
+    ## Parse command line options.
+    while getopts "l" optopt; do
+        case $optopt in
+            l)  opt_l=y;;
+            \?) return 1;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    
+
+    ## List categories.
+    tmpd="$(mktemp -d)"
+    find "$@" -maxdepth 1 -mindepth 1 -type f | while read -r f
+    do
+        category="$(sed -n 's|^\#.*[Cc]ategory: *||p;50q' "${f}")"
+        category="${category:-other}"
+        echo "${f}" >> "${tmpd}/${category}"
+    done
+
+    ## Print files and categories.
+    for c in $(find "${tmpd}" -type f); do
+        n="$(basename "$c")"
+        if test -e ~/.categories; then
+            n1="$(sed -n "s|^${n} *: *||p" ~/.categories)"
+            n="${n1:-${n}}"
+        fi
+        echo "${n}"
+        echo
+        while read -r f; do
+            if test -n "${opt_l}"; then
+                n="[${f}](${f})"
+            else
+                n="${f}"
+            fi
+            h="$(sed -n 's|^\#help: *||p;50q' "${f}")"
+            echo "- ${n} : ${h}"
+        done < "${c}"
+        echo
+    done
+}
+if test @"$(basename "$0")" = @"ls-h-category";then
+    case "${1}" in
+        -h|--help) sed -n 's/^ *#h: \{0,1\}//p' "$0" ;;
+        *)         ls_h_category "$@"; exit 0        ;;
+    esac
+fi
