@@ -21,10 +21,9 @@ ls_h_category() {
     done
     shift $(( $OPTIND - 1 ))
     
-
     ## List categories.
     tmpd="$(mktemp -d)"
-    find "$@" -maxdepth 1 -mindepth 1 -type f | while read -r f
+    find "$@" -maxdepth 1 -mindepth 1 -type f | sort | while read -r f
     do
         category="$(sed -n 's|^\#.*[Cc]ategory: *||p;50q' "${f}")"
         category="${category:-other}"
